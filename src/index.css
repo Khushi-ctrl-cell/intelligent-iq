@@ -1,0 +1,159 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
+
+@layer base {
+  :root {
+    --background: 240 10% 3.9%;
+    --foreground: 0 0% 98%;
+
+    --card: 240 6% 6%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 240 6% 6%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 160 84% 39%;
+    --primary-foreground: 240 10% 3.9%;
+
+    --secondary: 240 4% 16%;
+    --secondary-foreground: 0 0% 80%;
+
+    --muted: 240 4% 16%;
+    --muted-foreground: 240 5% 50%;
+
+    --accent: 240 4% 16%;
+    --accent-foreground: 0 0% 98%;
+
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 240 4% 16%;
+    --input: 240 4% 16%;
+    --ring: 160 84% 39%;
+
+    --radius: 2px;
+
+    --sidebar-background: 240 6% 6%;
+    --sidebar-foreground: 240 5% 65%;
+    --sidebar-primary: 160 84% 39%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4% 16%;
+    --sidebar-accent-foreground: 240 5% 65%;
+    --sidebar-border: 240 4% 16%;
+    --sidebar-ring: 160 84% 39%;
+
+    /* Semantic difficulty colors */
+    --difficulty-easy: 160 84% 39%;
+    --difficulty-medium: 38 92% 50%;
+    --difficulty-hard: 0 72% 51%;
+
+    /* Status colors */
+    --status-success: 160 84% 39%;
+    --status-error: 0 72% 51%;
+    --status-warning: 38 92% 50%;
+    --status-info: 217 91% 60%;
+
+    /* Pipeline status */
+    --pipeline-idle: 240 5% 50%;
+    --pipeline-active: 160 84% 39%;
+    --pipeline-error: 0 72% 51%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-mono;
+    font-feature-settings: "liga" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .font-body {
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+
+  .text-difficulty-easy {
+    color: hsl(var(--difficulty-easy));
+  }
+
+  .text-difficulty-medium {
+    color: hsl(var(--difficulty-medium));
+  }
+
+  .text-difficulty-hard {
+    color: hsl(var(--difficulty-hard));
+  }
+
+  .bg-difficulty-easy {
+    background-color: hsl(var(--difficulty-easy) / 0.15);
+  }
+
+  .bg-difficulty-medium {
+    background-color: hsl(var(--difficulty-medium) / 0.15);
+  }
+
+  .bg-difficulty-hard {
+    background-color: hsl(var(--difficulty-hard) / 0.15);
+  }
+
+  .border-difficulty-easy {
+    border-color: hsl(var(--difficulty-easy) / 0.3);
+  }
+
+  .border-difficulty-medium {
+    border-color: hsl(var(--difficulty-medium) / 0.3);
+  }
+
+  .border-difficulty-hard {
+    border-color: hsl(var(--difficulty-hard) / 0.3);
+  }
+
+  .status-dot {
+    @apply inline-block w-2 h-2 rounded-full;
+  }
+
+  .status-dot-active {
+    background-color: hsl(var(--status-success));
+    box-shadow: 0 0 6px hsl(var(--status-success) / 0.5);
+  }
+
+  .status-dot-error {
+    background-color: hsl(var(--status-error));
+  }
+
+  .status-dot-idle {
+    background-color: hsl(var(--pipeline-idle));
+  }
+
+  .panel {
+    @apply border border-border bg-card p-6;
+  }
+
+  .panel-header {
+    @apply mb-4 text-xs font-bold uppercase tracking-widest text-muted-foreground;
+  }
+
+  .data-row {
+    @apply flex justify-between py-1.5 text-sm;
+  }
+
+  .data-label {
+    @apply text-muted-foreground;
+  }
+
+  .data-value {
+    @apply text-primary font-medium;
+  }
+}
