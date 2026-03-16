@@ -344,6 +344,72 @@ export default function AdminDashboard() {
           </div>
         </div>
       )}
+
+      {/* AI Quality Metrics */}
+      {activeTab === "ai-quality" && (
+        <div className="space-y-4">
+          {(() => {
+            const totalGenerated = aiMetrics.reduce((s, m) => s + m.questions_generated, 0);
+            const totalRejected = aiMetrics.reduce((s, m) => s + m.questions_rejected, 0);
+            const totalVerified = aiMetrics.reduce((s, m) => s + m.questions_verified, 0);
+            const overallAccuracy = totalGenerated > 0 ? ((totalVerified / totalGenerated) * 100).toFixed(1) : "0";
+
+            return (
+              <>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="panel text-center">
+                    <p className="text-2xl font-bold text-foreground">{totalGenerated}</p>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1">GENERATED</p>
+                  </div>
+                  <div className="panel text-center">
+                    <p className="text-2xl font-bold text-destructive">{totalRejected}</p>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1">REJECTED</p>
+                  </div>
+                  <div className="panel text-center">
+                    <p className="text-2xl font-bold text-primary">{totalVerified}</p>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1">VERIFIED</p>
+                  </div>
+                  <div className="panel text-center">
+                    <p className="text-2xl font-bold text-primary">{overallAccuracy}%</p>
+                    <p className="text-[10px] text-muted-foreground uppercase tracking-widest mt-1">AI ACCURACY</p>
+                  </div>
+                </div>
+
+                {aiMetrics.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">No AI quality metrics recorded yet.</p>
+                ) : (
+                  <div className="space-y-2">
+                    <h3 className="panel-header">Generation History</h3>
+                    {aiMetrics.map((m) => (
+                      <div key={m.id} className="panel">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs text-muted-foreground">
+                            {new Date(m.created_at).toLocaleString()}
+                          </span>
+                          <span className={`px-2 py-0.5 text-[10px] font-bold uppercase border ${
+                            m.accuracy_rate >= 80
+                              ? "text-primary border-primary/30 bg-primary/10"
+                              : m.accuracy_rate >= 50
+                                ? "text-difficulty-medium border-difficulty-medium"
+                                : "text-destructive border-destructive/30 bg-destructive/10"
+                          }`}>
+                            {m.accuracy_rate}% ACCURACY
+                          </span>
+                        </div>
+                        <div className="flex gap-6 text-xs">
+                          <span><span className="text-muted-foreground">GEN:</span> {m.questions_generated}</span>
+                          <span><span className="text-destructive">REJ:</span> {m.questions_rejected}</span>
+                          <span><span className="text-primary">VER:</span> {m.questions_verified}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>
+            );
+          })()}
+        </div>
+      )}
     </div>
   );
 }
