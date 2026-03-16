@@ -25,6 +25,7 @@ export interface QuizQuestion {
   options: string[] | null;
   answer: string;
   difficulty: string | null;
+  is_verified: boolean;
   created_at: string;
 }
 
@@ -35,6 +36,15 @@ export interface QuizAttempt {
   selected_answer: string;
   is_correct: boolean;
   difficulty_at_time: string | null;
+  created_at: string;
+}
+
+export interface AIQualityMetric {
+  id: string;
+  questions_generated: number;
+  questions_rejected: number;
+  questions_verified: number;
+  accuracy_rate: number;
   created_at: string;
 }
 

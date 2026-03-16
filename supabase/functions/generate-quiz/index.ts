@@ -36,6 +36,25 @@ function hashQuestion(q: string): string {
   return "qh_" + Math.abs(hash).toString(36);
 }
 
+// --- Hallucination Detection ---
+function isGroundedInChunk(answer: string, chunkText: string): boolean {
+  const normalizedAnswer = answer.toLowerCase().trim();
+  const normalizedChunk = chunkText.toLowerCase();
+  
+  // Check if the answer (or significant parts) appear in the chunk
+  if (normalizedChunk.includes(normalizedAnswer)) return true;
+  
+  // Check word-level overlap for longer answers
+  const answerWords = normalizedAnswer.split(/\s+/).filter(w => w.length > 3);
+  if (answerWords.length === 0) return true;
+  
+  const matchedWords = answerWords.filter(word => normalizedChunk.includes(word));
+  const overlapRatio = matchedWords.length / answerWords.length;
+  
+  // At least 60% of significant words must appear in the chunk
+  return overlapRatio >= 0.6;
+}
+
 // --- AI call with retry ---
 async function callAI(
   aiApiKey: string,
@@ -99,7 +118,7 @@ Deno.serve(async (req) => {
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const aiApiKey = Deno.env.get("LOVABLE_API_KEY")!; // AI Gateway API key
+    const aiApiKey = Deno.env.get("LOVABLE_API_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     let body: Record<string, unknown>;
@@ -154,7 +173,6 @@ Deno.serve(async (req) => {
 
     console.log(`[generate-quiz] Found ${chunks.length} chunks`);
 
-    // Select 1 chunk from the middle of the document for a focused set of 3 questions
     const selectedChunk = chunks[Math.floor(chunks.length / 2)];
 
     if (!selectedChunk.text || selectedChunk.text.trim().length < 20) {
@@ -165,57 +183,64 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Metrics tracking
+    let totalGenerated = 0;
+    let totalRejected = 0;
+    let totalVerified = 0;
+
     const allQuestions: Record<string, unknown>[] = [];
     let aiFailed = false;
+    const MAX_ATTEMPTS = 3;
+    let attemptCount = 0;
 
-    const prompt = `Based on the following educational text, generate exactly 3 quiz questions: one easy, one medium, and one hard.
+    while (allQuestions.length < 3 && attemptCount < MAX_ATTEMPTS) {
+      attemptCount++;
+      const neededDifficulties = ["easy", "medium", "hard"].filter(
+        d => !allQuestions.some(q => q.difficulty === d)
+      );
 
-IMPORTANT: Return ONLY a valid JSON array with exactly 3 objects, each with this structure:
+      if (neededDifficulties.length === 0) break;
+
+      const prompt = `Based on the following educational text, generate exactly ${neededDifficulties.length} quiz question(s) with difficulties: ${neededDifficulties.join(", ")}.
+
+CRITICAL RULES:
+1. The correct answer MUST be directly stated or clearly derivable from the provided text.
+2. Do NOT invent facts, numbers, or concepts not present in the text.
+3. Return ONLY a valid JSON array with objects having this structure:
+
 [
   {
-    "question": "easy question text",
+    "question": "question text",
     "type": "MCQ",
     "options": ["option A", "option B", "option C", "option D"],
     "answer": "the correct option text (must match one of the options exactly)",
-    "difficulty": "easy"
-  },
-  {
-    "question": "medium question text",
-    "type": "MCQ",
-    "options": ["option A", "option B", "option C", "option D"],
-    "answer": "the correct option text (must match one of the options exactly)",
-    "difficulty": "medium"
-  },
-  {
-    "question": "hard question text",
-    "type": "MCQ",
-    "options": ["option A", "option B", "option C", "option D"],
-    "answer": "the correct option text (must match one of the options exactly)",
-    "difficulty": "hard"
+    "difficulty": "${neededDifficulties[0]}"
   }
 ]
 
 Easy = recall/definition. Medium = application/analysis. Hard = synthesis/evaluation.
-Make questions educational and meaningful. Each question must have 4 distinct options.
+Each question must have 4 distinct options. The answer must come from the source text below.
 
 Text: ${selectedChunk.text}`;
 
-    console.log(`[generate-quiz] Generating 3 questions from 1 chunk`);
+      console.log(`[generate-quiz] Attempt ${attemptCount}: generating ${neededDifficulties.length} questions`);
 
-    const result = await callAI(aiApiKey, prompt, 1);
+      const result = await callAI(aiApiKey, prompt, 1);
 
-    if (!result.ok) {
-      if (result.status === 402) {
-        aiFailed = true;
-      } else {
-        console.warn(`[generate-quiz] AI failed after retry`);
-        aiFailed = true;
+      if (!result.ok) {
+        if (result.status === 402) aiFailed = true;
+        else {
+          console.warn(`[generate-quiz] AI failed on attempt ${attemptCount}`);
+          aiFailed = true;
+        }
+        break;
       }
-    } else if (!result.content) {
-      console.warn(`[generate-quiz] Empty AI response`);
-      aiFailed = true;
-    } else {
-      // Parse JSON array
+
+      if (!result.content) {
+        console.warn(`[generate-quiz] Empty AI response on attempt ${attemptCount}`);
+        continue;
+      }
+
       let jsonStr = result.content;
       const jsonMatch = result.content.match(/```(?:json)?\s*([\s\S]*?)```/);
       if (jsonMatch) jsonStr = jsonMatch[1];
@@ -227,8 +252,7 @@ Text: ${selectedChunk.text}`;
         parsedArray = Array.isArray(parsed) ? parsed : [parsed];
       } catch {
         console.error(`[generate-quiz] Failed to parse AI JSON:`, jsonStr.slice(0, 200));
-        aiFailed = true;
-        parsedArray = [];
+        continue;
       }
 
       for (const parsed of parsedArray) {
@@ -236,6 +260,24 @@ Text: ${selectedChunk.text}`;
           console.warn(`[generate-quiz] Invalid question structure, skipping`);
           continue;
         }
+
+        totalGenerated++;
+
+        // --- Hallucination Detection ---
+        console.log(`[AI-VERIFY] Checking grounding for question: "${(parsed.question as string).slice(0, 60)}..."`);
+        
+        const isGrounded = isGroundedInChunk(parsed.answer as string, selectedChunk.text);
+
+        if (!isGrounded) {
+          totalRejected++;
+          console.warn(`[AI-VERIFY] Hallucinated question rejected ⚠ Answer "${(parsed.answer as string).slice(0, 40)}" not grounded in chunk`);
+          continue;
+        }
+
+        console.log(`[AI-VERIFY] Question verified ✔ (${parsed.difficulty})`);
+
+        // Skip if we already have this difficulty
+        if (allQuestions.some(q => q.difficulty === parsed.difficulty)) continue;
 
         const questionHash = hashQuestion(parsed.question as string);
 
@@ -248,6 +290,7 @@ Text: ${selectedChunk.text}`;
           options: parsed.options || null,
           answer: parsed.answer,
           difficulty: parsed.difficulty || "medium",
+          is_verified: true,
         });
 
         if (insertError) {
@@ -257,7 +300,8 @@ Text: ${selectedChunk.text}`;
             console.error("[generate-quiz] DB insert error:", insertError);
           }
         } else {
-          console.log(`[generate-quiz] ✓ Question stored (${parsed.difficulty}): ${(parsed.question as string).slice(0, 60)}...`);
+          totalVerified++;
+          console.log(`[generate-quiz] ✓ Verified question stored (${parsed.difficulty}): ${(parsed.question as string).slice(0, 60)}...`);
           allQuestions.push({
             id: crypto.randomUUID(),
             question: parsed.question,
@@ -266,8 +310,25 @@ Text: ${selectedChunk.text}`;
             answer: parsed.answer,
             difficulty: parsed.difficulty || "medium",
             source_chunk_id: selectedChunk.id,
+            is_verified: true,
           });
         }
+      }
+    }
+
+    // --- Store AI Quality Metrics ---
+    if (totalGenerated > 0) {
+      const accuracyRate = totalGenerated > 0 ? (totalVerified / totalGenerated) * 100 : 0;
+      const { error: metricsError } = await supabase.from("ai_quality_metrics").insert({
+        questions_generated: totalGenerated,
+        questions_rejected: totalRejected,
+        questions_verified: totalVerified,
+        accuracy_rate: Math.round(accuracyRate * 100) / 100,
+      });
+      if (metricsError) {
+        console.error("[generate-quiz] Failed to store AI quality metrics:", metricsError);
+      } else {
+        console.log(`[generate-quiz] AI Quality Metrics: generated=${totalGenerated}, rejected=${totalRejected}, verified=${totalVerified}, accuracy=${accuracyRate.toFixed(1)}%`);
       }
     }
 
@@ -301,10 +362,17 @@ Text: ${selectedChunk.text}`;
       );
     }
 
-    console.log(`[generate-quiz] Complete: ${allQuestions.length} questions generated for source ${source_id}`);
+    console.log(`[generate-quiz] Complete: ${allQuestions.length} verified questions for source ${source_id}`);
 
     return new Response(
-      JSON.stringify({ success: true, questions_generated: allQuestions.length, questions: allQuestions }),
+      JSON.stringify({
+        success: true,
+        questions_generated: totalGenerated,
+        questions_verified: totalVerified,
+        questions_rejected: totalRejected,
+        accuracy_rate: totalGenerated > 0 ? Math.round((totalVerified / totalGenerated) * 10000) / 100 : 100,
+        questions: allQuestions,
+      }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (e) {

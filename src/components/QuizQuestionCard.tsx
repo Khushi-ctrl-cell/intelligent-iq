@@ -65,14 +65,19 @@ export default function QuizQuestionCard({ question }: QuizQuestionCardProps) {
         </span>
       </div>
 
-      {/* Type badge */}
-      <div className="flex items-center gap-3">
+      {/* Type badge + verification */}
+      <div className="flex items-center gap-3 flex-wrap">
         <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
           TYPE: {question.type}
         </span>
         <span className="text-[10px] text-muted-foreground uppercase tracking-wider truncate">
           CHUNK: {question.source_chunk_id?.slice(0, 8) || "N/A"}
         </span>
+        {question.is_verified && (
+          <span className="inline-flex items-center gap-1 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary border border-primary/30 bg-primary/10">
+            AI Verified ✔
+          </span>
+        )}
       </div>
 
       {/* Options */}
