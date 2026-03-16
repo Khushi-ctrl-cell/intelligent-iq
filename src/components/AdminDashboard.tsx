@@ -31,6 +31,7 @@ export default function AdminDashboard() {
       setChunks((data.chunks || []) as ContentChunk[]);
       setQuestions((data.questions || []) as QuizQuestion[]);
       setAttempts((data.attempts || []) as QuizAttempt[]);
+      setAiMetrics((data.ai_metrics || []) as AIQualityMetric[]);
     } catch (err) {
       console.error("Failed to load admin data:", err);
     }
