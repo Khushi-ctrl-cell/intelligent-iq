@@ -56,6 +56,7 @@ export default function AdminDashboard() {
     { key: "questions" as const, label: "QUESTIONS", count: questions.length },
     { key: "attempts" as const, label: "ATTEMPTS", count: attempts.length },
     { key: "analytics" as const, label: "ANALYTICS", count: null },
+    { key: "ai-quality" as const, label: "AI QUALITY", count: aiMetrics.length },
   ];
 
   const totalCorrect = attempts.filter((a) => a.is_correct).length;
