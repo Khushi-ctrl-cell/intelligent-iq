@@ -154,25 +154,21 @@ Deno.serve(async (req) => {
 
     console.log(`[generate-quiz] Found ${chunks.length} chunks`);
 
-    // Select up to 5 chunks spread across the document
-    const selectedChunks = [];
-    const step = Math.max(1, Math.floor(chunks.length / 5));
-    for (let i = 0; i < chunks.length && selectedChunks.length < 5; i += step) {
-      selectedChunks.push(chunks[i]);
+    // Select 1 chunk from the middle of the document for a focused set of 3 questions
+    const selectedChunk = chunks[Math.floor(chunks.length / 2)];
+
+    if (!selectedChunk.text || selectedChunk.text.trim().length < 20) {
+      console.error("[generate-quiz] Selected chunk too short");
+      return new Response(JSON.stringify({ error: "Selected chunk has insufficient text." }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     const allQuestions: Record<string, unknown>[] = [];
     let aiFailed = false;
 
-    for (let i = 0; i < selectedChunks.length; i++) {
-      const chunk = selectedChunks[i];
-
-      if (!chunk.text || chunk.text.trim().length < 20) {
-        console.warn(`[generate-quiz] Chunk ${i} too short, skipping`);
-        continue;
-      }
-
-      const prompt = `Based on the following educational text, generate exactly 3 quiz questions: one easy, one medium, and one hard.
+    const prompt = `Based on the following educational text, generate exactly 3 quiz questions: one easy, one medium, and one hard.
 
 IMPORTANT: Return ONLY a valid JSON array with exactly 3 objects, each with this structure:
 [
@@ -202,11 +198,11 @@ IMPORTANT: Return ONLY a valid JSON array with exactly 3 objects, each with this
 Easy = recall/definition. Medium = application/analysis. Hard = synthesis/evaluation.
 Make questions educational and meaningful. Each question must have 4 distinct options.
 
-Text: ${chunk.text}`;
+Text: ${selectedChunk.text}`;
 
-      console.log(`[generate-quiz] Generating 3 questions from chunk ${i + 1}/${selectedChunks.length}`);
+    console.log(`[generate-quiz] Generating 3 questions from 1 chunk`);
 
-      const result = await callAI(aiApiKey, prompt, 1);
+    const result = await callAI(aiApiKey, prompt, 1);
 
       if (!result.ok) {
         if (result.status === 402) {

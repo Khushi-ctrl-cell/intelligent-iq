@@ -2,9 +2,14 @@ import { useState } from "react";
 import type { PipelineStatus, QuizQuestion } from "@/types/quiz";
 import { ingestPDF, generateQuiz } from "@/lib/api";
 
-export default function PipelineTest() {
+interface PipelineTestProps {
+  onQuizGenerated: (questions: QuizQuestion[], sourceId: string) => void;
+  onSourceIngested: (sourceId: string) => void;
+  sourceId: string | null;
+}
+
+export default function PipelineTest({ onQuizGenerated, onSourceIngested, sourceId }: PipelineTestProps) {
   const [status, setStatus] = useState<PipelineStatus>("idle");
-  const [sourceId, setSourceId] = useState<string | null>(null);
   const [chunksCreated, setChunksCreated] = useState(0);
   const [textLength, setTextLength] = useState(0);
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
@@ -22,7 +27,7 @@ export default function PipelineTest() {
     try {
       setStatus("ingesting");
       const result = await ingestPDF(file);
-      setSourceId(result.source_id);
+      onSourceIngested(result.source_id);
       setChunksCreated(result.chunks_created);
       setTextLength(result.text_length || 0);
       setStatus("complete");
@@ -33,13 +38,18 @@ export default function PipelineTest() {
   };
 
   const handleGenerateQuiz = async () => {
-    if (!sourceId) return;
+    if (!sourceId) {
+      setError("Please upload and ingest a PDF first.");
+      return;
+    }
     setError(null);
     setStatus("generating");
 
     try {
       const result = await generateQuiz(sourceId);
-      setQuestions(result.questions || []);
+      const qs = result.questions || [];
+      setQuestions(qs);
+      onQuizGenerated(qs, sourceId);
       setStatus("complete");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Quiz generation failed");
@@ -111,25 +121,28 @@ export default function PipelineTest() {
       </div>
 
       {/* Generate Quiz */}
-      {sourceId && (
-        <div className="panel">
-          <h2 className="panel-header">2 — Generate Quiz</h2>
-          <button
-            onClick={handleGenerateQuiz}
-            disabled={status === "generating"}
-            className="px-4 py-2 text-xs font-semibold bg-foreground text-background
-              hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed
-              transition-colors"
-          >
-            {status === "generating" ? "[GENERATING...]" : "GENERATE_QUIZ()"}
-          </button>
-          {questions.length > 0 && (
-            <p className="mt-3 text-xs text-primary">
-              ✓ {questions.length} questions generated
-            </p>
-          )}
-        </div>
-      )}
+      <div className="panel">
+        <h2 className="panel-header">2 — Generate Quiz</h2>
+        <button
+          onClick={handleGenerateQuiz}
+          disabled={status === "generating"}
+          className="px-4 py-2 text-xs font-semibold bg-foreground text-background
+            hover:bg-primary disabled:opacity-50 disabled:cursor-not-allowed
+            transition-colors"
+        >
+          {status === "generating" ? "[GENERATING...]" : "GENERATE_QUIZ()"}
+        </button>
+        {!sourceId && (
+          <p className="mt-3 text-xs text-muted-foreground">
+            Upload and ingest a PDF first to enable quiz generation.
+          </p>
+        )}
+        {questions.length > 0 && (
+          <p className="mt-3 text-xs text-primary">
+            ✓ {questions.length} questions generated — switch to QUIZ tab to answer
+          </p>
+        )}
+      </div>
 
       {/* Error */}
       {error && (
