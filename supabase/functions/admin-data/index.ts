@@ -15,11 +15,12 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const [s, c, q, a] = await Promise.all([
+    const [s, c, q, a, m] = await Promise.all([
       supabase.from("sources").select("*").order("created_at", { ascending: false }),
       supabase.from("content_chunks").select("id, source_id, chunk_index, text, subject, topic, created_at").order("created_at", { ascending: false }).limit(50),
       supabase.from("quiz_questions").select("*").order("created_at", { ascending: false }),
       supabase.from("quiz_attempts").select("*").order("created_at", { ascending: false }).limit(50),
+      supabase.from("ai_quality_metrics").select("*").order("created_at", { ascending: false }).limit(50),
     ]);
 
     return new Response(
@@ -28,6 +29,7 @@ Deno.serve(async (req) => {
         chunks: c.data || [],
         questions: q.data || [],
         attempts: a.data || [],
+        ai_metrics: m.data || [],
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
