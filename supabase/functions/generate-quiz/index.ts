@@ -204,21 +204,17 @@ Text: ${selectedChunk.text}`;
 
     const result = await callAI(aiApiKey, prompt, 1);
 
-      if (!result.ok) {
-        if (result.status === 402) {
-          aiFailed = true;
-          break;
-        }
-        console.warn(`[generate-quiz] AI failed for chunk ${i} after retry, skipping`);
+    if (!result.ok) {
+      if (result.status === 402) {
         aiFailed = true;
-        continue;
+      } else {
+        console.warn(`[generate-quiz] AI failed after retry`);
+        aiFailed = true;
       }
-
-      if (!result.content) {
-        console.warn(`[generate-quiz] Empty AI response for chunk ${i}`);
-        continue;
-      }
-
+    } else if (!result.content) {
+      console.warn(`[generate-quiz] Empty AI response`);
+      aiFailed = true;
+    } else {
       // Parse JSON array
       let jsonStr = result.content;
       const jsonMatch = result.content.match(/```(?:json)?\s*([\s\S]*?)```/);
@@ -230,8 +226,9 @@ Text: ${selectedChunk.text}`;
         const parsed = JSON.parse(jsonStr);
         parsedArray = Array.isArray(parsed) ? parsed : [parsed];
       } catch {
-        console.error(`[generate-quiz] Failed to parse AI JSON for chunk ${i}:`, jsonStr.slice(0, 200));
-        continue;
+        console.error(`[generate-quiz] Failed to parse AI JSON:`, jsonStr.slice(0, 200));
+        aiFailed = true;
+        parsedArray = [];
       }
 
       for (const parsed of parsedArray) {
@@ -244,7 +241,7 @@ Text: ${selectedChunk.text}`;
 
         const { error: insertError } = await supabase.from("quiz_questions").insert({
           source_id,
-          source_chunk_id: chunk.id,
+          source_chunk_id: selectedChunk.id,
           question_hash: questionHash,
           question: parsed.question,
           type: parsed.type || "MCQ",
@@ -262,12 +259,13 @@ Text: ${selectedChunk.text}`;
         } else {
           console.log(`[generate-quiz] ✓ Question stored (${parsed.difficulty}): ${(parsed.question as string).slice(0, 60)}...`);
           allQuestions.push({
+            id: crypto.randomUUID(),
             question: parsed.question,
             type: parsed.type,
             options: parsed.options,
             answer: parsed.answer,
             difficulty: parsed.difficulty || "medium",
-            source_chunk_id: chunk.id,
+            source_chunk_id: selectedChunk.id,
           });
         }
       }
