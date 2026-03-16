@@ -3,7 +3,6 @@ import PipelineTest from "@/components/PipelineTest";
 import QuizQuestionCard from "@/components/QuizQuestionCard";
 import AdminDashboard from "@/components/AdminDashboard";
 import StudentStats from "@/components/StudentStats";
-import { fetchQuiz } from "@/lib/api";
 import type { QuizQuestion } from "@/types/quiz";
 
 type Tab = "pipeline" | "quiz" | "admin";
@@ -11,26 +10,7 @@ type Tab = "pipeline" | "quiz" | "admin";
 const Index = () => {
   const [tab, setTab] = useState<Tab>("pipeline");
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
-  const [quizLoading, setQuizLoading] = useState(false);
-  const [difficultyFilter, setDifficultyFilter] = useState<string>("");
-
-  const loadQuestions = async () => {
-    setQuizLoading(true);
-    try {
-      const params: Record<string, string> = {};
-      if (difficultyFilter) params.difficulty = difficultyFilter;
-      const res = await fetchQuiz(params);
-      setQuestions(res.questions || []);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setQuizLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (tab === "quiz") loadQuestions();
-  }, [tab, difficultyFilter]);
+  const [sourceId, setSourceId] = useState<string | null>(null);
 
   const tabs: { key: Tab; label: string }[] = [
     { key: "pipeline", label: "PIPELINE" },
@@ -68,7 +48,16 @@ const Index = () => {
       </nav>
 
       {/* Pipeline */}
-      {tab === "pipeline" && <PipelineTest />}
+      {tab === "pipeline" && (
+        <PipelineTest
+          onQuizGenerated={(qs, sid) => {
+            setQuestions(qs);
+            setSourceId(sid);
+          }}
+          onSourceIngested={(sid) => setSourceId(sid)}
+          sourceId={sourceId}
+        />
+      )}
 
       {/* Quiz */}
       {tab === "quiz" && (
@@ -78,30 +67,18 @@ const Index = () => {
 
           <div className="flex items-center gap-4">
             <h2 className="panel-header mb-0">Quiz Questions</h2>
-            <div className="flex gap-1 ml-auto">
-              {["", "easy", "medium", "hard"].map((d) => (
-                <button
-                  key={d}
-                  onClick={() => setDifficultyFilter(d)}
-                  className={`px-3 py-1 text-[10px] font-bold uppercase border transition-colors
-                    ${difficultyFilter === d
-                      ? "border-primary text-primary"
-                      : "border-border text-muted-foreground hover:text-foreground"
-                    }`}
-                >
-                  {d || "ALL"}
-                </button>
-              ))}
-            </div>
           </div>
 
-          {quizLoading ? (
-            <p className="text-xs text-muted-foreground animate-pulse-slow">[LOADING QUESTIONS...]</p>
-          ) : questions.length === 0 ? (
-            <div className="panel">
-              <p className="text-xs text-muted-foreground">
-                No questions found. Upload a PDF and generate a quiz first.
-              </p>
+          {questions.length === 0 ? (
+            <div className="panel border-border">
+              <div className="py-8 text-center space-y-2">
+                <p className="text-sm font-semibold text-foreground">
+                  No Quiz Generated
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Upload and ingest a PDF to generate quiz questions.
+                </p>
+              </div>
             </div>
           ) : (
             <div className="space-y-4">
