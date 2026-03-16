@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { fetchHealth, fetchAdminData } from "@/lib/api";
-import type { Source, ContentChunk, QuizQuestion, QuizAttempt } from "@/types/quiz";
+import type { Source, ContentChunk, QuizQuestion, QuizAttempt, AIQualityMetric } from "@/types/quiz";
 
 interface HealthData {
   status: string;
@@ -14,9 +14,10 @@ export default function AdminDashboard() {
   const [chunks, setChunks] = useState<ContentChunk[]>([]);
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [attempts, setAttempts] = useState<QuizAttempt[]>([]);
+  const [aiMetrics, setAiMetrics] = useState<AIQualityMetric[]>([]);
   const [health, setHealth] = useState<HealthData | null>(null);
   const [healthLoading, setHealthLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<"status" | "sources" | "chunks" | "questions" | "attempts" | "analytics">("status");
+  const [activeTab, setActiveTab] = useState<"status" | "sources" | "chunks" | "questions" | "attempts" | "analytics" | "ai-quality">("status");
 
   useEffect(() => {
     loadData();
