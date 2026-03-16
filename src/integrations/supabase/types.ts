@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      ai_quality_metrics: {
+        Row: {
+          accuracy_rate: number
+          created_at: string
+          id: string
+          questions_generated: number
+          questions_rejected: number
+          questions_verified: number
+        }
+        Insert: {
+          accuracy_rate?: number
+          created_at?: string
+          id?: string
+          questions_generated?: number
+          questions_rejected?: number
+          questions_verified?: number
+        }
+        Update: {
+          accuracy_rate?: number
+          created_at?: string
+          id?: string
+          questions_generated?: number
+          questions_rejected?: number
+          questions_verified?: number
+        }
+        Relationships: []
+      }
       content_chunks: {
         Row: {
           chunk_index: number
@@ -102,6 +129,7 @@ export type Database = {
           created_at: string | null
           difficulty: string | null
           id: string
+          is_verified: boolean | null
           options: Json | null
           question: string
           question_hash: string | null
@@ -114,6 +142,7 @@ export type Database = {
           created_at?: string | null
           difficulty?: string | null
           id?: string
+          is_verified?: boolean | null
           options?: Json | null
           question: string
           question_hash?: string | null
@@ -126,6 +155,7 @@ export type Database = {
           created_at?: string | null
           difficulty?: string | null
           id?: string
+          is_verified?: boolean | null
           options?: Json | null
           question?: string
           question_hash?: string | null
