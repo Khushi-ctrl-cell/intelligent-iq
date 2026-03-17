@@ -336,7 +336,7 @@ Text: ${selectedChunk.text}`;
       console.warn("[generate-quiz] AI failed, falling back to cached questions for source");
       const { data: cached } = await supabase
         .from("quiz_questions")
-        .select("*")
+        .select("id, question, type, options, difficulty, source_chunk_id, is_verified, source_id, created_at")
         .eq("source_id", source_id)
         .order("created_at", { ascending: false })
         .limit(5);
