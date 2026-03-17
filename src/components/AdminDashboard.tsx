@@ -61,6 +61,12 @@ export default function AdminDashboard() {
     }
   };
 
+  useEffect(() => {
+    if (isDemo) {
+      loadHealth().catch(() => {});
+    }
+  }, [isDemo]);
+
   if (!authenticated) {
     return (
       <div className="panel space-y-4 max-w-md mx-auto mt-12">
