@@ -300,14 +300,13 @@ Text: ${selectedChunk.text}`;
             console.error("[generate-quiz] DB insert error:", insertError);
           }
         } else {
-          totalVerified++;
+        totalVerified++;
           console.log(`[generate-quiz] ✓ Verified question stored (${parsed.difficulty}): ${(parsed.question as string).slice(0, 60)}...`);
           allQuestions.push({
             id: crypto.randomUUID(),
             question: parsed.question,
             type: parsed.type,
             options: parsed.options,
-            answer: parsed.answer,
             difficulty: parsed.difficulty || "medium",
             source_chunk_id: selectedChunk.id,
             is_verified: true,

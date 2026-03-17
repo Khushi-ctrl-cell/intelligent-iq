@@ -85,10 +85,22 @@ export async function fetchHealth() {
   return res.json();
 }
 
-export async function fetchAdminData() {
-  const res = await fetch(`${SUPABASE_URL}/functions/v1/admin-data`, { headers });
+export async function fetchAdminData(adminKey: string) {
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/admin-data`, {
+    headers: { ...headers, "x-admin-key": adminKey },
+  });
   if (!res.ok) {
     throw new Error("Failed to fetch admin data");
+  }
+  return res.json();
+}
+
+export async function fetchHealthAdmin(adminKey: string) {
+  const res = await fetch(`${SUPABASE_URL}/functions/v1/health`, {
+    headers: { ...headers, "x-admin-key": adminKey },
+  });
+  if (!res.ok) {
+    throw new Error("Health check failed");
   }
   return res.json();
 }
