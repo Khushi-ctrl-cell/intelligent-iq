@@ -159,21 +159,22 @@ export default function QuizQuestionCard({ question }: QuizQuestionCardProps) {
             </span>
           </div>
 
-          {!explanation ? (
-            <button
-              onClick={handleExplanation}
-              disabled={explLoading}
-              className="px-3 py-1.5 text-[10px] font-semibold border border-border
-                text-muted-foreground hover:text-foreground hover:border-muted-foreground
-                disabled:opacity-50 transition-colors"
-            >
-              {explLoading ? "[LOADING...]" : "GET_EXPLANATION()"}
-            </button>
-          ) : (
-            <div className="p-3 bg-secondary text-sm text-secondary-foreground leading-relaxed font-sans">
-              {explanation}
+          {explLoading ? (
+            <p className="text-xs text-muted-foreground animate-pulse">
+              Generating explanation...
+            </p>
+          ) : explanation ? (
+            <div className="space-y-1">
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                AI EXPLANATION:
+              </span>
+              <div className="p-3 bg-secondary text-sm text-secondary-foreground leading-relaxed font-sans">
+                {explanation}
+              </div>
             </div>
-          )}
+          ) : explError ? (
+            <p className="text-xs text-destructive">{explError}</p>
+          ) : null}
         </div>
       )}
     </div>
