@@ -123,6 +123,14 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
+      {isDemo && (
+        <div className="panel border-primary/30 bg-primary/5">
+          <p className="text-xs text-primary font-semibold">
+            READ-ONLY MODE — Data modifications are disabled in demo mode.
+            {!adminKey && " Enter an admin key via REFRESH to load live data."}
+          </p>
+        </div>
+      )}
       {/* Tabs */}
       <div className="flex gap-1 border-b border-border overflow-x-auto">
         {tabs.map((tab) => (
