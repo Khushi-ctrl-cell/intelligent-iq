@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { QuizQuestion } from "@/types/quiz";
-import { submitAnswer, generateExplanation } from "@/lib/api";
+import { submitAnswer, generateExplanation, fetchChunkText } from "@/lib/api";
 
 interface QuizQuestionCardProps {
   question: QuizQuestion;
@@ -17,6 +17,7 @@ export default function QuizQuestionCard({ question }: QuizQuestionCardProps) {
   const [loading, setLoading] = useState(false);
   const [explLoading, setExplLoading] = useState(false);
   const [fillAnswer, setFillAnswer] = useState("");
+  const [explError, setExplError] = useState<string | null>(null);
 
   const difficultyClass = question.difficulty === "easy"
     ? "bg-difficulty-easy text-difficulty-easy border-difficulty-easy"
@@ -32,23 +33,32 @@ export default function QuizQuestionCard({ question }: QuizQuestionCardProps) {
     try {
       const res = await submitAnswer(question.id, answer);
       setResult(res);
+
+      // Auto-fetch explanation after submission
+      setExplLoading(true);
+      try {
+        let chunkText: string | undefined;
+        if (question.source_chunk_id) {
+          const text = await fetchChunkText(question.source_chunk_id);
+          if (text) chunkText = text;
+        }
+        const explRes = await generateExplanation(
+          question.question,
+          res.correct_answer,
+          chunkText
+        );
+        setExplanation(explRes.explanation);
+      } catch (explErr) {
+        console.error("Explanation error:", explErr);
+        setExplanation(null);
+        setExplError("Unable to generate explanation. Please try again.");
+      } finally {
+        setExplLoading(false);
+      }
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleExplanation = async () => {
-    if (!result) return;
-    setExplLoading(true);
-    try {
-      const res = await generateExplanation(question.question, result.correct_answer);
-      setExplanation(res.explanation);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setExplLoading(false);
     }
   };
 
@@ -149,21 +159,22 @@ export default function QuizQuestionCard({ question }: QuizQuestionCardProps) {
             </span>
           </div>
 
-          {!explanation ? (
-            <button
-              onClick={handleExplanation}
-              disabled={explLoading}
-              className="px-3 py-1.5 text-[10px] font-semibold border border-border
-                text-muted-foreground hover:text-foreground hover:border-muted-foreground
-                disabled:opacity-50 transition-colors"
-            >
-              {explLoading ? "[LOADING...]" : "GET_EXPLANATION()"}
-            </button>
-          ) : (
-            <div className="p-3 bg-secondary text-sm text-secondary-foreground leading-relaxed font-sans">
-              {explanation}
+          {explLoading ? (
+            <p className="text-xs text-muted-foreground animate-pulse">
+              Generating explanation...
+            </p>
+          ) : explanation ? (
+            <div className="space-y-1">
+              <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
+                AI EXPLANATION:
+              </span>
+              <div className="p-3 bg-secondary text-sm text-secondary-foreground leading-relaxed font-sans">
+                {explanation}
+              </div>
             </div>
-          )}
+          ) : explError ? (
+            <p className="text-xs text-destructive">{explError}</p>
+          ) : null}
         </div>
       )}
     </div>

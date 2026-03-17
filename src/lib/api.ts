@@ -75,6 +75,20 @@ export async function submitAnswer(questionId: string, selectedAnswer: string) {
   return res.json();
 }
 
+export async function fetchChunkText(chunkId: string): Promise<string | null> {
+  try {
+    const { data, error } = await supabase
+      .from("content_chunks")
+      .select("text")
+      .eq("id", chunkId)
+      .single();
+    if (error || !data) return null;
+    return data.text;
+  } catch {
+    return null;
+  }
+}
+
 export async function generateExplanation(question: string, correctAnswer: string, chunkText?: string) {
   const headers = await getAuthHeaders();
   const res = await fetch(`${SUPABASE_URL}/functions/v1/generate-explanation`, {
