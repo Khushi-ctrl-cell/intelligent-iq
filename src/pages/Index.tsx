@@ -39,15 +39,17 @@ const Index = () => {
           </div>
           <div className="flex items-center gap-3">
             <span className="text-[10px] text-muted-foreground truncate max-w-[160px]">
-              {user?.email}
+              {isDemo ? "DEMO_ADMIN" : user?.email}
             </span>
-            <button
-              onClick={signOut}
-              className="px-3 py-1.5 text-[10px] font-semibold border border-border
-                text-muted-foreground hover:text-foreground hover:border-muted-foreground transition-colors"
-            >
-              SIGN_OUT()
-            </button>
+            {!isDemo && (
+              <button
+                onClick={signOut}
+                className="px-3 py-1.5 text-[10px] font-semibold border border-border
+                  text-muted-foreground hover:text-foreground hover:border-muted-foreground transition-colors"
+              >
+                SIGN_OUT()
+              </button>
+            )}
           </div>
         </div>
       </header>
