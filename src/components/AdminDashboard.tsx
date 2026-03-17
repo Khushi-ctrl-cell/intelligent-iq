@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { fetchHealth, fetchAdminData } from "@/lib/api";
+import { fetchHealth, fetchAdminData, fetchHealthAdmin } from "@/lib/api";
 import type { Source, ContentChunk, QuizQuestion, QuizAttempt, AIQualityMetric } from "@/types/quiz";
 
 interface HealthData {
