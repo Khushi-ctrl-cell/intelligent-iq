@@ -17,6 +17,7 @@ export default function QuizQuestionCard({ question }: QuizQuestionCardProps) {
   const [loading, setLoading] = useState(false);
   const [explLoading, setExplLoading] = useState(false);
   const [fillAnswer, setFillAnswer] = useState("");
+  const [explError, setExplError] = useState<string | null>(null);
 
   const difficultyClass = question.difficulty === "easy"
     ? "bg-difficulty-easy text-difficulty-easy border-difficulty-easy"
