@@ -301,7 +301,7 @@ Text: ${selectedChunk.text}`;
 
         const questionHash = hashQuestion(parsed.question as string);
 
-        const { error: insertError } = await supabase.from("quiz_questions").insert({
+        const { data: insertedRow, error: insertError } = await supabase.from("quiz_questions").insert({
           source_id,
           source_chunk_id: selectedChunk.id,
           question_hash: questionHash,
@@ -311,7 +311,7 @@ Text: ${selectedChunk.text}`;
           answer: parsed.answer,
           difficulty: parsed.difficulty || "medium",
           is_verified: true,
-        });
+        }).select("id").single();
 
         if (insertError) {
           if (insertError.code === "23505") {
@@ -323,7 +323,7 @@ Text: ${selectedChunk.text}`;
         totalVerified++;
           console.log(`[generate-quiz] ✓ Verified question stored (${parsed.difficulty}): ${(parsed.question as string).slice(0, 60)}...`);
           allQuestions.push({
-            id: crypto.randomUUID(),
+            id: insertedRow.id,
             question: parsed.question,
             type: parsed.type,
             options: parsed.options,
