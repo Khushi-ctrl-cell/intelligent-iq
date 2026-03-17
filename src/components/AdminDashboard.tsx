@@ -11,6 +11,7 @@ interface HealthData {
 }
 
 export default function AdminDashboard() {
+  const { isDemo } = useAuth();
   const [sources, setSources] = useState<Source[]>([]);
   const [chunks, setChunks] = useState<ContentChunk[]>([]);
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
@@ -20,7 +21,7 @@ export default function AdminDashboard() {
   const [healthLoading, setHealthLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"status" | "sources" | "chunks" | "questions" | "attempts" | "analytics" | "ai-quality">("status");
   const [adminKey, setAdminKey] = useState("");
-  const [authenticated, setAuthenticated] = useState(false);
+  const [authenticated, setAuthenticated] = useState(isDemo);
   const [authError, setAuthError] = useState("");
 
   const loadData = async (key: string) => {
