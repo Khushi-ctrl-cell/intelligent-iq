@@ -1,6 +1,6 @@
 import { useState } from "react";
 import type { QuizQuestion } from "@/types/quiz";
-import { submitAnswer, generateExplanation } from "@/lib/api";
+import { submitAnswer, generateExplanation, fetchChunkText } from "@/lib/api";
 
 interface QuizQuestionCardProps {
   question: QuizQuestion;
