@@ -205,7 +205,7 @@ export default function AdminDashboard() {
           )}
 
           <button
-            onClick={loadHealth}
+            onClick={() => loadHealth(adminKey)}
             disabled={healthLoading}
             className="px-4 py-2 text-xs font-semibold bg-foreground text-background
               hover:bg-primary disabled:opacity-50 transition-colors"
