@@ -134,7 +134,7 @@ export default function AdminDashboard() {
           </button>
         ))}
         <button
-          onClick={() => { loadData(); loadHealth(); }}
+          onClick={() => { loadData(adminKey); loadHealth(adminKey); }}
           className="ml-auto px-3 py-2 text-[10px] font-semibold text-muted-foreground
             hover:text-foreground transition-colors"
         >

@@ -42,9 +42,10 @@ export default function QuizQuestionCard({ question }: QuizQuestionCardProps) {
   };
 
   const handleExplanation = async () => {
+    if (!result) return;
     setExplLoading(true);
     try {
-      const res = await generateExplanation(question.question, question.answer);
+      const res = await generateExplanation(question.question, result.correct_answer);
       setExplanation(res.explanation);
     } catch (err) {
       console.error(err);
