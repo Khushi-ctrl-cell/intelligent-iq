@@ -16,11 +16,10 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     const url = new URL(req.url);
-    const topic = url.searchParams.get("topic");
     const difficulty = url.searchParams.get("difficulty");
     const source_id = url.searchParams.get("source_id");
 
-    let query = supabase.from("quiz_questions").select("*");
+    let query = supabase.from("quiz_questions").select("id, question, type, options, difficulty, source_chunk_id, is_verified, source_id, created_at");
 
     if (source_id) query = query.eq("source_id", source_id);
     if (difficulty) query = query.eq("difficulty", difficulty);
@@ -28,7 +27,7 @@ Deno.serve(async (req) => {
     const { data, error } = await query.order("created_at", { ascending: false });
 
     if (error) {
-      return new Response(JSON.stringify({ error: error.message }), {
+      return new Response(JSON.stringify({ error: "Failed to fetch questions" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -40,7 +39,7 @@ Deno.serve(async (req) => {
   } catch (e) {
     console.error("Quiz fetch error:", e);
     return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
+      JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }

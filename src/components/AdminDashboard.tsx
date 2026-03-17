@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { fetchHealth, fetchAdminData } from "@/lib/api";
+import { fetchHealth, fetchAdminData, fetchHealthAdmin } from "@/lib/api";
 import type { Source, ContentChunk, QuizQuestion, QuizAttempt, AIQualityMetric } from "@/types/quiz";
 
 interface HealthData {
@@ -18,15 +18,13 @@ export default function AdminDashboard() {
   const [health, setHealth] = useState<HealthData | null>(null);
   const [healthLoading, setHealthLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"status" | "sources" | "chunks" | "questions" | "attempts" | "analytics" | "ai-quality">("status");
+  const [adminKey, setAdminKey] = useState("");
+  const [authenticated, setAuthenticated] = useState(false);
+  const [authError, setAuthError] = useState("");
 
-  useEffect(() => {
-    loadData();
-    loadHealth();
-  }, []);
-
-  const loadData = async () => {
+  const loadData = async (key: string) => {
     try {
-      const data = await fetchAdminData();
+      const data = await fetchAdminData(key);
       setSources((data.sources || []) as Source[]);
       setChunks((data.chunks || []) as ContentChunk[]);
       setQuestions((data.questions || []) as QuizQuestion[]);
@@ -37,10 +35,10 @@ export default function AdminDashboard() {
     }
   };
 
-  const loadHealth = async () => {
+  const loadHealth = async (key?: string) => {
     setHealthLoading(true);
     try {
-      const data = await fetchHealth();
+      const data = key ? await fetchHealthAdmin(key) : await fetchHealth();
       setHealth(data);
     } catch {
       setHealth(null);
@@ -48,6 +46,43 @@ export default function AdminDashboard() {
       setHealthLoading(false);
     }
   };
+
+  const handleLogin = async () => {
+    setAuthError("");
+    try {
+      await fetchAdminData(adminKey);
+      setAuthenticated(true);
+      loadData(adminKey);
+      loadHealth(adminKey);
+    } catch {
+      setAuthError("Invalid admin key");
+    }
+  };
+
+  if (!authenticated) {
+    return (
+      <div className="panel space-y-4 max-w-md mx-auto mt-12">
+        <h2 className="panel-header">Admin Authentication</h2>
+        <p className="text-xs text-muted-foreground">Enter the admin secret key to access the dashboard.</p>
+        <input
+          type="password"
+          value={adminKey}
+          onChange={(e) => setAdminKey(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleLogin()}
+          placeholder="Admin secret key..."
+          className="w-full bg-secondary text-foreground text-sm px-3 py-2 border border-border focus:border-primary focus:outline-none"
+        />
+        {authError && <p className="text-xs text-destructive">{authError}</p>}
+        <button
+          onClick={handleLogin}
+          disabled={!adminKey}
+          className="px-4 py-2 text-xs font-semibold bg-foreground text-background hover:bg-primary disabled:opacity-50 transition-colors"
+        >
+          AUTHENTICATE()
+        </button>
+      </div>
+    );
+  }
 
   const tabs = [
     { key: "status" as const, label: "STATUS", count: null },
@@ -99,7 +134,7 @@ export default function AdminDashboard() {
           </button>
         ))}
         <button
-          onClick={() => { loadData(); loadHealth(); }}
+          onClick={() => { loadData(adminKey); loadHealth(adminKey); }}
           className="ml-auto px-3 py-2 text-[10px] font-semibold text-muted-foreground
             hover:text-foreground transition-colors"
         >
@@ -170,7 +205,7 @@ export default function AdminDashboard() {
           )}
 
           <button
-            onClick={loadHealth}
+            onClick={() => loadHealth(adminKey)}
             disabled={healthLoading}
             className="px-4 py-2 text-xs font-semibold bg-foreground text-background
               hover:bg-primary disabled:opacity-50 transition-colors"
