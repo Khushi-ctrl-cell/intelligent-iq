@@ -5,6 +5,27 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// --- Rate Limiting ---
+const rateLimitMap = new Map<string, number[]>();
+const RATE_LIMIT = 3;
+const RATE_WINDOW_MS = 3600_000; // 1 hour
+
+function isRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const timestamps = rateLimitMap.get(ip) || [];
+  const recent = timestamps.filter((t) => now - t < RATE_WINDOW_MS);
+  if (recent.length >= RATE_LIMIT) return true;
+  recent.push(now);
+  rateLimitMap.set(ip, recent);
+  return false;
+}
+
+function getClientIP(req: Request): string {
+  return req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    req.headers.get("cf-connecting-ip") ||
+    "unknown";
+}
+
 function chunkText(text: string, size = 500, overlap = 100): { chunk_index: number; text: string }[] {
   const chunks: { chunk_index: number; text: string }[] = [];
   const cleaned = text.replace(/\s+/g, " ").trim();
@@ -24,10 +45,20 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Rate limiting
+  const clientIP = getClientIP(req);
+  if (isRateLimited(clientIP)) {
+    console.warn(`[ingest] Rate limited: ${clientIP}`);
+    return new Response(
+      JSON.stringify({ error: "Rate limit exceeded. Max 3 uploads per hour." }),
+      { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
+  }
+
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const aiApiKey = Deno.env.get("LOVABLE_API_KEY")!; // AI Gateway API key
+    const aiApiKey = Deno.env.get("LOVABLE_API_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
     let formData: FormData;
@@ -48,8 +79,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (!file.name.toLowerCase().endsWith(".pdf")) {
-      return new Response(JSON.stringify({ error: "Only PDF files are accepted. Got: " + file.name }), {
+    // Validate file type via both extension and MIME
+    if (!file.name.toLowerCase().endsWith(".pdf") || (file.type && file.type !== "application/pdf")) {
+      return new Response(JSON.stringify({ error: "Only PDF files are accepted." }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -62,7 +94,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log(`[ingest] Processing: ${file.name} (${(file.size / 1024).toFixed(1)} KB)`);
+    console.log(`[ingest] Processing: ${file.name} (${(file.size / 1024).toFixed(1)} KB) from IP: ${clientIP}`);
 
     const buffer = new Uint8Array(await file.arrayBuffer());
 
@@ -74,7 +106,7 @@ Deno.serve(async (req) => {
 
     if (uploadError) {
       console.error("[ingest] Storage upload error:", uploadError);
-      return new Response(JSON.stringify({ error: "Failed to upload PDF: " + uploadError.message }), {
+      return new Response(JSON.stringify({ error: "Failed to upload PDF" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -82,9 +114,8 @@ Deno.serve(async (req) => {
 
     console.log(`[ingest] ✓ Uploaded to storage: ${storagePath}`);
 
-    // Extract text using Gemini multimodal (reads PDFs natively)
+    // Extract text using Gemini multimodal
     const base64Pdf = btoa(String.fromCharCode(...buffer));
-    
     console.log(`[ingest] Sending PDF to AI for text extraction (${(base64Pdf.length / 1024).toFixed(0)} KB base64)`);
 
     let extractedText = "";
@@ -118,9 +149,8 @@ Deno.serve(async (req) => {
       });
 
       if (!aiResponse.ok) {
-        const errText = await aiResponse.text();
-        console.error(`[ingest] AI extraction failed: ${aiResponse.status}`, errText);
-        return new Response(JSON.stringify({ error: "Failed to extract text from PDF. AI service returned: " + aiResponse.status }), {
+        console.error(`[ingest] AI extraction failed: ${aiResponse.status}`);
+        return new Response(JSON.stringify({ error: "Failed to extract text from PDF. Please try again." }), {
           status: 422,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
@@ -141,7 +171,6 @@ Deno.serve(async (req) => {
       console.warn("[ingest] Very little text extracted from PDF");
       return new Response(JSON.stringify({
         error: "Could not extract meaningful text from this PDF. It may be blank, scanned/image-only, or corrupted.",
-        text_length: extractedText.trim().length,
       }), {
         status: 422,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -229,7 +258,7 @@ Deno.serve(async (req) => {
   } catch (e) {
     console.error("[ingest] Unhandled error:", e);
     return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
+      JSON.stringify({ error: "Internal server error" }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
