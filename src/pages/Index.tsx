@@ -3,25 +3,30 @@ import PipelineTest from "@/components/PipelineTest";
 import QuizQuestionCard from "@/components/QuizQuestionCard";
 import AdminDashboard from "@/components/AdminDashboard";
 import StudentStats from "@/components/StudentStats";
+import DemoBanner from "@/components/DemoBanner";
 import { useAuth } from "@/components/AuthProvider";
 import type { QuizQuestion } from "@/types/quiz";
 
 type Tab = "pipeline" | "quiz" | "admin";
 
 const Index = () => {
-  const { user, signOut } = useAuth();
-  const [tab, setTab] = useState<Tab>("pipeline");
+  const { user, signOut, isDemo } = useAuth();
+  const [tab, setTab] = useState<Tab>(isDemo ? "admin" : "pipeline");
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [sourceId, setSourceId] = useState<string | null>(null);
 
-  const tabs: { key: Tab; label: string }[] = [
-    { key: "pipeline", label: "PIPELINE" },
-    { key: "quiz", label: "QUIZ" },
-    { key: "admin", label: "ADMIN" },
-  ];
+  const tabs: { key: Tab; label: string }[] = isDemo
+    ? [{ key: "admin", label: "ADMIN" }]
+    : [
+        { key: "pipeline", label: "PIPELINE" },
+        { key: "quiz", label: "QUIZ" },
+        { key: "admin", label: "ADMIN" },
+      ];
 
   return (
-    <div className="min-h-screen bg-background p-6 md:p-8 max-w-5xl mx-auto">
+    <div className="min-h-screen bg-background">
+      {isDemo && <DemoBanner />}
+      <div className="p-6 md:p-8 max-w-5xl mx-auto">
       <header className="mb-8 border-b border-border pb-6">
         <div className="flex items-center justify-between">
           <div>
@@ -34,15 +39,17 @@ const Index = () => {
           </div>
           <div className="flex items-center gap-3">
             <span className="text-[10px] text-muted-foreground truncate max-w-[160px]">
-              {user?.email}
+              {isDemo ? "DEMO_ADMIN" : user?.email}
             </span>
-            <button
-              onClick={signOut}
-              className="px-3 py-1.5 text-[10px] font-semibold border border-border
-                text-muted-foreground hover:text-foreground hover:border-muted-foreground transition-colors"
-            >
-              SIGN_OUT()
-            </button>
+            {!isDemo && (
+              <button
+                onClick={signOut}
+                className="px-3 py-1.5 text-[10px] font-semibold border border-border
+                  text-muted-foreground hover:text-foreground hover:border-muted-foreground transition-colors"
+              >
+                SIGN_OUT()
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -100,6 +107,7 @@ const Index = () => {
       )}
 
       {tab === "admin" && <AdminDashboard />}
+      </div>
     </div>
   );
 };

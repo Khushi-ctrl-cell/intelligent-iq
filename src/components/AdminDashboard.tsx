@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { fetchHealth, fetchAdminData, fetchHealthAdmin } from "@/lib/api";
+import { useAuth } from "@/components/AuthProvider";
 import type { Source, ContentChunk, QuizQuestion, QuizAttempt, AIQualityMetric } from "@/types/quiz";
 
 interface HealthData {
@@ -10,6 +11,7 @@ interface HealthData {
 }
 
 export default function AdminDashboard() {
+  const { isDemo } = useAuth();
   const [sources, setSources] = useState<Source[]>([]);
   const [chunks, setChunks] = useState<ContentChunk[]>([]);
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
@@ -19,7 +21,7 @@ export default function AdminDashboard() {
   const [healthLoading, setHealthLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<"status" | "sources" | "chunks" | "questions" | "attempts" | "analytics" | "ai-quality">("status");
   const [adminKey, setAdminKey] = useState("");
-  const [authenticated, setAuthenticated] = useState(false);
+  const [authenticated, setAuthenticated] = useState(isDemo);
   const [authError, setAuthError] = useState("");
 
   const loadData = async (key: string) => {
@@ -58,6 +60,12 @@ export default function AdminDashboard() {
       setAuthError("Invalid admin key");
     }
   };
+
+  useEffect(() => {
+    if (isDemo) {
+      loadHealth().catch(() => {});
+    }
+  }, [isDemo]);
 
   if (!authenticated) {
     return (
@@ -115,6 +123,14 @@ export default function AdminDashboard() {
 
   return (
     <div className="space-y-6">
+      {isDemo && (
+        <div className="panel border-primary/30 bg-primary/5">
+          <p className="text-xs text-primary font-semibold">
+            READ-ONLY MODE — Data modifications are disabled in demo mode.
+            {!adminKey && " Enter an admin key via REFRESH to load live data."}
+          </p>
+        </div>
+      )}
       {/* Tabs */}
       <div className="flex gap-1 border-b border-border overflow-x-auto">
         {tabs.map((tab) => (
