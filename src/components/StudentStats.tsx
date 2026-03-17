@@ -1,8 +1,6 @@
 import { useEffect, useState } from "react";
 import { fetchStudentStats } from "@/lib/api";
 
-const STUDENT_ID = "00000000-0000-0000-0000-000000000001";
-
 interface ProgressData {
   correct_count: number;
   wrong_count: number;
@@ -23,7 +21,7 @@ export default function StudentStats() {
   const loadStats = async () => {
     setLoading(true);
     try {
-      const data = await fetchStudentStats(STUDENT_ID);
+      const data = await fetchStudentStats();
       if (data.progress) {
         setProgress(data.progress as ProgressData);
       }

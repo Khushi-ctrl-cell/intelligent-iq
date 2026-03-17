@@ -2,8 +2,6 @@ import { useState } from "react";
 import type { QuizQuestion } from "@/types/quiz";
 import { submitAnswer, generateExplanation } from "@/lib/api";
 
-const STUDENT_ID = "00000000-0000-0000-0000-000000000001";
-
 interface QuizQuestionCardProps {
   question: QuizQuestion;
 }
@@ -32,7 +30,7 @@ export default function QuizQuestionCard({ question }: QuizQuestionCardProps) {
 
     setLoading(true);
     try {
-      const res = await submitAnswer(STUDENT_ID, question.id, answer);
+      const res = await submitAnswer(question.id, answer);
       setResult(res);
     } catch (err) {
       console.error(err);
@@ -56,7 +54,6 @@ export default function QuizQuestionCard({ question }: QuizQuestionCardProps) {
 
   return (
     <div className="panel space-y-4">
-      {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <p className="text-sm text-foreground font-medium leading-relaxed">
           {question.question}
@@ -66,7 +63,6 @@ export default function QuizQuestionCard({ question }: QuizQuestionCardProps) {
         </span>
       </div>
 
-      {/* Type badge + verification */}
       <div className="flex items-center gap-3 flex-wrap">
         <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
           TYPE: {question.type}
@@ -81,7 +77,6 @@ export default function QuizQuestionCard({ question }: QuizQuestionCardProps) {
         )}
       </div>
 
-      {/* Options */}
       {question.type === "Fill-in-the-blank" ? (
         <input
           type="text"
@@ -123,7 +118,6 @@ export default function QuizQuestionCard({ question }: QuizQuestionCardProps) {
         </div>
       )}
 
-      {/* Submit */}
       {!result && (
         <button
           onClick={handleSubmit}
@@ -135,7 +129,6 @@ export default function QuizQuestionCard({ question }: QuizQuestionCardProps) {
         </button>
       )}
 
-      {/* Result */}
       {result && (
         <div className="space-y-3 pt-2 border-t border-border">
           <div className="flex items-center gap-3">
@@ -156,7 +149,6 @@ export default function QuizQuestionCard({ question }: QuizQuestionCardProps) {
             </span>
           </div>
 
-          {/* Explanation */}
           {!explanation ? (
             <button
               onClick={handleExplanation}
