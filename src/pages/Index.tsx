@@ -105,6 +105,7 @@ const Index = () => {
       )}
 
       {tab === "admin" && <AdminDashboard />}
+      </div>
     </div>
   );
 };
