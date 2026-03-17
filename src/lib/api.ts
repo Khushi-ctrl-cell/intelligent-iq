@@ -1,17 +1,26 @@
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+import { supabase } from "@/integrations/supabase/client";
 
-const headers = {
-  Authorization: `Bearer ${SUPABASE_KEY}`,
-};
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+
+async function getAuthHeaders(): Promise<Record<string, string>> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) {
+    throw new Error("Not authenticated. Please sign in.");
+  }
+  return {
+    Authorization: `Bearer ${session.access_token}`,
+    apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+  };
+}
 
 export async function ingestPDF(file: File) {
+  const headers = await getAuthHeaders();
   const formData = new FormData();
   formData.append("file", file);
 
   const res = await fetch(`${SUPABASE_URL}/functions/v1/ingest`, {
     method: "POST",
-    headers: { ...headers },
+    headers,
     body: formData,
   });
 
@@ -23,6 +32,7 @@ export async function ingestPDF(file: File) {
 }
 
 export async function generateQuiz(sourceId: string) {
+  const headers = await getAuthHeaders();
   const res = await fetch(`${SUPABASE_URL}/functions/v1/generate-quiz`, {
     method: "POST",
     headers: { ...headers, "Content-Type": "application/json" },
@@ -37,6 +47,7 @@ export async function generateQuiz(sourceId: string) {
 }
 
 export async function fetchQuiz(params?: { source_id?: string; difficulty?: string }) {
+  const headers = await getAuthHeaders();
   const url = new URL(`${SUPABASE_URL}/functions/v1/quiz`);
   if (params?.source_id) url.searchParams.set("source_id", params.source_id);
   if (params?.difficulty) url.searchParams.set("difficulty", params.difficulty);
@@ -49,11 +60,12 @@ export async function fetchQuiz(params?: { source_id?: string; difficulty?: stri
   return res.json();
 }
 
-export async function submitAnswer(studentId: string, questionId: string, selectedAnswer: string) {
+export async function submitAnswer(questionId: string, selectedAnswer: string) {
+  const headers = await getAuthHeaders();
   const res = await fetch(`${SUPABASE_URL}/functions/v1/submit-answer`, {
     method: "POST",
     headers: { ...headers, "Content-Type": "application/json" },
-    body: JSON.stringify({ student_id: studentId, question_id: questionId, selected_answer: selectedAnswer }),
+    body: JSON.stringify({ question_id: questionId, selected_answer: selectedAnswer }),
   });
 
   if (!res.ok) {
@@ -64,6 +76,7 @@ export async function submitAnswer(studentId: string, questionId: string, select
 }
 
 export async function generateExplanation(question: string, correctAnswer: string, chunkText?: string) {
+  const headers = await getAuthHeaders();
   const res = await fetch(`${SUPABASE_URL}/functions/v1/generate-explanation`, {
     method: "POST",
     headers: { ...headers, "Content-Type": "application/json" },
@@ -78,6 +91,7 @@ export async function generateExplanation(question: string, correctAnswer: strin
 }
 
 export async function fetchHealth() {
+  const headers = await getAuthHeaders();
   const res = await fetch(`${SUPABASE_URL}/functions/v1/health`, { headers });
   if (!res.ok) {
     throw new Error("Health check failed");
@@ -86,6 +100,7 @@ export async function fetchHealth() {
 }
 
 export async function fetchAdminData(adminKey: string) {
+  const headers = await getAuthHeaders();
   const res = await fetch(`${SUPABASE_URL}/functions/v1/admin-data`, {
     headers: { ...headers, "x-admin-key": adminKey },
   });
@@ -96,6 +111,7 @@ export async function fetchAdminData(adminKey: string) {
 }
 
 export async function fetchHealthAdmin(adminKey: string) {
+  const headers = await getAuthHeaders();
   const res = await fetch(`${SUPABASE_URL}/functions/v1/health`, {
     headers: { ...headers, "x-admin-key": adminKey },
   });
@@ -105,9 +121,9 @@ export async function fetchHealthAdmin(adminKey: string) {
   return res.json();
 }
 
-export async function fetchStudentStats(studentId: string) {
+export async function fetchStudentStats() {
+  const headers = await getAuthHeaders();
   const url = new URL(`${SUPABASE_URL}/functions/v1/student-stats`);
-  url.searchParams.set("student_id", studentId);
   const res = await fetch(url.toString(), { headers });
   if (!res.ok) {
     throw new Error("Failed to fetch student stats");
