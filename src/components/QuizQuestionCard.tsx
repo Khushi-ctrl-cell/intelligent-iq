@@ -32,23 +32,32 @@ export default function QuizQuestionCard({ question }: QuizQuestionCardProps) {
     try {
       const res = await submitAnswer(question.id, answer);
       setResult(res);
+
+      // Auto-fetch explanation after submission
+      setExplLoading(true);
+      try {
+        let chunkText: string | undefined;
+        if (question.source_chunk_id) {
+          const text = await fetchChunkText(question.source_chunk_id);
+          if (text) chunkText = text;
+        }
+        const explRes = await generateExplanation(
+          question.question,
+          res.correct_answer,
+          chunkText
+        );
+        setExplanation(explRes.explanation);
+      } catch (explErr) {
+        console.error("Explanation error:", explErr);
+        setExplanation(null);
+        setExplError("Unable to generate explanation. Please try again.");
+      } finally {
+        setExplLoading(false);
+      }
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleExplanation = async () => {
-    if (!result) return;
-    setExplLoading(true);
-    try {
-      const res = await generateExplanation(question.question, result.correct_answer);
-      setExplanation(res.explanation);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setExplLoading(false);
     }
   };
 
